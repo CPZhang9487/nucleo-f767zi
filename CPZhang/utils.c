@@ -18,6 +18,10 @@ int _write(int file, char *ptr, int len) {
     return len;
 }
 
+/*
+ * 改寫 malloc 與 free 成 FreeRTOS 的 pvPortMalloc 與 vPortFree
+ * 支援 newlib reentrant
+ */
 #ifdef PORTABLE_H
 
 #if defined(configUSE_NEWLIB_REENTRANT) && configUSE_NEWLIB_REENTRANT
@@ -38,4 +42,4 @@ void free(void *pv) {
     vPortFree(pv);
 }
 
-#endif
+#endif  // #ifdef PORTABLE_H
