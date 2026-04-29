@@ -84,11 +84,17 @@ static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 /* USER CODE BEGIN PFP */
+void LED_Blink_Step();
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void LED_Blink_Step() {
+  HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+}
 
 /* USER CODE END 0 */
 
@@ -137,6 +143,8 @@ int main(void) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    LED_Blink_Step();
+    HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
