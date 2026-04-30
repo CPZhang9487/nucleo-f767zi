@@ -17,7 +17,10 @@ def format_c():
         retry = 0
         _content = ""
         while True:
-            content = file.read_text("utf-8")
+            content = file.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            )
             if _content == content:  # 格式化後保持不變即表示完成
                 return file
             retry += 1
