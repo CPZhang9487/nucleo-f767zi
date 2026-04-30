@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include <stdlib.h>
 
 /* USER CODE END Includes */
@@ -33,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define UART3_RX_BUF_LEN 1024
+#define UART3_TX_BUF_LEN 1024
 
 /* USER CODE END PD */
 
@@ -71,12 +72,13 @@ ETH_TxPacketConfig TxConfig;
 ETH_HandleTypeDef heth;
 
 UART_HandleTypeDef huart3;
-DMA_HandleTypeDef hdma_usart3_rx;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-uint8_t uart3_rx_buf[UART3_RX_BUF_LEN];
+uint8_t uart3_tx_buf[UART3_TX_BUF_LEN];
+uint32_t uart3_tx_head = 0;
+uint32_t uart3_tx_tail = 0;
 
 /* USER CODE END PV */
 
@@ -84,13 +86,14 @@ uint8_t uart3_rx_buf[UART3_RX_BUF_LEN];
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 /* USER CODE BEGIN PFP */
 void LED_Blink_Step();
 void Uart3_Tx_Step();
+
+int __io_putchar(int ch);
 
 /* USER CODE END PFP */
 
@@ -107,27 +110,33 @@ void Uart3_Tx_Step() {
     return;
   }
 
-  static uint32_t tail = 0;
-  uint32_t head = UART3_RX_BUF_LEN - __HAL_DMA_GET_COUNTER(huart3.hdmarx);
+  fflush(stdout);
 
   uint32_t len;
-  if (head >= tail) {
-    len = head - tail;
+  if (uart3_tx_head >= uart3_tx_tail) {
+    len = uart3_tx_head - uart3_tx_tail;
   } else {
-    len = UART3_RX_BUF_LEN + head - tail;
+    len = UART3_TX_BUF_LEN + uart3_tx_head - uart3_tx_tail;
   }
   if (len == 0) {
     return;
   }
 
-  uint32_t chunk = UART3_RX_BUF_LEN - tail;
+  uint32_t chunk = UART3_TX_BUF_LEN - uart3_tx_tail;
   if (chunk > len) {
     chunk = len;
   }
 
-  HAL_UART_Transmit_IT(&huart3, uart3_rx_buf + tail, chunk);
-  tail += chunk;
-  tail %= UART3_RX_BUF_LEN;
+  HAL_UART_Transmit_IT(&huart3, uart3_tx_buf + uart3_tx_tail, chunk);
+  uart3_tx_tail += chunk;
+  uart3_tx_tail %= UART3_TX_BUF_LEN;
+}
+
+int __io_putchar(int ch) {
+  uart3_tx_buf[uart3_tx_head] = (uint8_t)ch;
+  uart3_tx_head += 1;
+  uart3_tx_head %= UART3_TX_BUF_LEN;
+  return ch;
 }
 
 /* USER CODE END 0 */
@@ -164,12 +173,11 @@ int main(void) {
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_ETH_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_DMA(&huart3, uart3_rx_buf, UART3_RX_BUF_LEN);
+  printf("\nSYSCLK: %luM\n", HAL_RCC_GetSysClockFreq() / 1000000);
 
   /* USER CODE END 2 */
 
@@ -188,6 +196,7 @@ int main(void) {
       if (now - last >= delay) {
         last = now;
         delay = rand() % 1000;
+        printf("\rled delay %03d", delay);
         LED_Blink_Step();
       }
     }
@@ -314,7 +323,7 @@ static void MX_USART3_UART_Init(void) {
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.Mode = UART_MODE_TX;
   huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart3.Init.OverSampling = UART_OVERSAMPLING_16;
   huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
@@ -357,20 +366,6 @@ static void MX_USB_OTG_FS_PCD_Init(void) {
   /* USER CODE BEGIN USB_OTG_FS_Init 2 */
 
   /* USER CODE END USB_OTG_FS_Init 2 */
-}
-
-/**
- * Enable DMA controller clock
- */
-static void MX_DMA_Init(void) {
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Stream1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 }
 
 /**
