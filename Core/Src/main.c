@@ -177,7 +177,7 @@ int main(void) {
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-  printf("\nSYSCLK: %luM\n", HAL_RCC_GetSysClockFreq() / 1000000);
+  printf("\nSYSCLK: %.3fM\n", HAL_RCC_GetSysClockFreq() / 1000000.0);
 
   /* USER CODE END 2 */
 
