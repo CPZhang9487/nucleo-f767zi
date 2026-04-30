@@ -23,7 +23,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -71,6 +70,8 @@ ETH_TxPacketConfig TxConfig;
 
 ETH_HandleTypeDef heth;
 
+RNG_HandleTypeDef hrng;
+
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
@@ -89,6 +90,7 @@ static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
+static void MX_RNG_Init(void);
 /* USER CODE BEGIN PFP */
 void LED_Blink_Step();
 void Uart3_Tx_Step();
@@ -176,6 +178,7 @@ int main(void) {
   MX_ETH_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
+  MX_RNG_Init();
   /* USER CODE BEGIN 2 */
   printf("\nSYSCLK: %.3fM\n", HAL_RCC_GetSysClockFreq() / 1000000.0);
 
@@ -190,13 +193,13 @@ int main(void) {
     Uart3_Tx_Step();
 
     {
-      static int last = 0;
-      static int delay = 0;
-      int now = HAL_GetTick();
+      static uint32_t last = 0;
+      static uint32_t delay = 0;
+      uint32_t now = HAL_GetTick();
       if (now - last >= delay) {
         last = now;
-        delay = rand() % 1000;
-        printf("\rled delay %03d", delay);
+        delay = HAL_RNG_GetRandomNumber(&hrng) % 1000;
+        printf("\rled delay %03lu", delay);
         LED_Blink_Step();
       }
     }
@@ -302,6 +305,29 @@ static void MX_ETH_Init(void) {
   /* USER CODE BEGIN ETH_Init 2 */
 
   /* USER CODE END ETH_Init 2 */
+}
+
+/**
+ * @brief RNG Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_RNG_Init(void) {
+
+  /* USER CODE BEGIN RNG_Init 0 */
+
+  /* USER CODE END RNG_Init 0 */
+
+  /* USER CODE BEGIN RNG_Init 1 */
+
+  /* USER CODE END RNG_Init 1 */
+  hrng.Instance = RNG;
+  if (HAL_RNG_Init(&hrng) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RNG_Init 2 */
+
+  /* USER CODE END RNG_Init 2 */
 }
 
 /**
