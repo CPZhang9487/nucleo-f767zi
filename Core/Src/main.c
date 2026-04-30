@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -182,9 +183,11 @@ int main(void) {
 
     {
       static int last = 0;
+      static int delay = 0;
       int now = HAL_GetTick();
-      if (now - last >= 1000) {
+      if (now - last >= delay) {
         last = now;
+        delay = rand() % 1000;
         LED_Blink_Step();
       }
     }
