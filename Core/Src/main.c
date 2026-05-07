@@ -68,6 +68,9 @@ ETH_DMADescTypeDef DMATxDscrTab[ETH_TX_DESC_CNT] __attribute__((
 
 ETH_TxPacketConfig TxConfig;
 
+ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
+
 ETH_HandleTypeDef heth;
 
 RNG_HandleTypeDef hrng;
@@ -81,19 +84,24 @@ uint8_t uart3_tx_buf[UART3_TX_BUF_LEN];
 uint32_t uart3_tx_head = 0;
 uint32_t uart3_tx_tail = 0;
 
+uint16_t adc_temperature[1];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_RNG_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 void LED_Blink_Step();
 void Uart3_Tx_Step();
+void Adc_Temperature_Print_Step();
 
 int __io_putchar(int ch);
 
@@ -132,6 +140,12 @@ void Uart3_Tx_Step() {
   HAL_UART_Transmit_IT(&huart3, uart3_tx_buf + uart3_tx_tail, chunk);
   uart3_tx_tail += chunk;
   uart3_tx_tail %= UART3_TX_BUF_LEN;
+}
+
+void Adc_Temperature_Print_Step() {
+  float vsence = adc_temperature[0] * 3.3f / 4095.0f;
+  float temperature = (vsence - 0.76f) / 0.0025f + 25.0f;
+  printf("temperature: %.03f\n", temperature);
 }
 
 int __io_putchar(int ch) {
@@ -175,12 +189,16 @@ int main(void) {
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ETH_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_RNG_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   printf("\nSYSCLK: %.3fM\n", HAL_RCC_GetSysClockFreq() / 1000000.0);
+
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_temperature, 1);
 
   /* USER CODE END 2 */
 
@@ -199,8 +217,18 @@ int main(void) {
       if (now - last >= delay) {
         last = now;
         delay = HAL_RNG_GetRandomNumber(&hrng) % 1000;
-        printf("\rled delay %03lu", delay);
+        printf("led delay %03lu\n", delay);
         LED_Blink_Step();
+      }
+    }
+
+    {
+      static uint32_t last = 0;
+      static uint32_t delay = 1000;
+      uint32_t now = HAL_GetTick();
+      if (now - last >= delay) {
+        last = now;
+        Adc_Temperature_Print_Step();
       }
     }
   }
@@ -258,6 +286,56 @@ void SystemClock_Config(void) {
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK) {
     Error_Handler();
   }
+}
+
+/**
+ * @brief ADC1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_ADC1_Init(void) {
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data
+   * Alignment and number of conversion)
+   */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK) {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in
+   * the sequencer and its sample time.
+   */
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
 }
 
 /**
@@ -392,6 +470,20 @@ static void MX_USB_OTG_FS_PCD_Init(void) {
   /* USER CODE BEGIN USB_OTG_FS_Init 2 */
 
   /* USER CODE END USB_OTG_FS_Init 2 */
+}
+
+/**
+ * Enable DMA controller clock
+ */
+static void MX_DMA_Init(void) {
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 }
 
 /**
