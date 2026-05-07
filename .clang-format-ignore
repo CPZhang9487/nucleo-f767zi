@@ -1,2 +1,11 @@
-*
-!Core/Src/main.c
+# 我服了
+# clang-format 現在版本 22.1.5
+# ignore 使用 ! 會有 bug
+# 無法正確套用規則
+# 目前解決方法是直接在 .clang-format 加上 DisableFormat: true
+# 要格式化檔案的話在同一層目錄添加新的 .clang-format
+# 內容寫 DisableFormat: false
+# 或許同一層有些檔案不想格式化
+# 可以再添加 .clang-format-ignore 把不想格式化的檔案加進去
+# 不過算了，反正要格式化的通常都是自己有修改的檔案
+# 同一層下的檔案也沒多多
